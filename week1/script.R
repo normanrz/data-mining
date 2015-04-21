@@ -102,3 +102,13 @@ print(lm(height ~ age))
 plot(age, height, xlab = "Age", ylab = "Height", main = "Age/Height")
 abline(lm(height~age))
 
+
+# Bonus 1
+predicted <- c(0.95, 0.93, 0.93, 0.88, 0.86, 0.85, 0.82, 0.8, 0.8, 0.79, 0.77, 0.76, 0.73, 0.65, 0.63, 0.58, 0.56, 0.49, 0.48)
+actual <- c(1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1)
+
+tpr <- mapply(function(a) { sum(actual[0:a])/13 }, c(1:19))
+fpr <- mapply(function(a) { (a - sum(actual[0:a]))/13 }, c(1:19))
+plot(fpr, tpr, type = "l", 
+     xlab = "False positive rate", ylab = "True positive rate", 
+     main = "ROC curve", xlim = c(0, 1), ylim = c(0, 1))
