@@ -74,22 +74,8 @@ meanB <- mean(algoB)
 df <- length(algoA) - 1
 
 meanD <- meanA - meanB
-sD <- sqrt(sd(algoA)**2/length(algoA) + sd(algoB)**2/length(algoB))
-# H_0 = mean(algoA) = mean(algoB)
-# H_1 = mean(algoA) != mean(algoB)
-
-# Assignment 5
-mean_pop <- 2
-sigma_pop <- 0.1
-size_sample <- 200
-mean_sample <- 2.012
-
-sigma_sample <- sigma_pop / sqrt(size_sample)
-
-printf("Likelihood of Hypothesis: %f", pnorm(mean_sample, mean=mean_pop, sd=sigma_sample))
-
-
-# Assignment 6
+sD <- sqrt(sd(algoA)**2/length(algoA) - sd(algoB)**2/length(algoB))
+Y <- (meanD*sqrt(length(algoA)))/sD
 
 
 # Assignment 7
