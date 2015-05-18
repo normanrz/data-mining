@@ -5,17 +5,17 @@ customers <- c("X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10", "X11
 textiles <- c("medium", "few", "medium", "many", "few", "many", "few", "medium", "many", "few", "few", "many")
 gifts <- c("few", "medium", "many", "few", "medium", "medium", "many", "few", "few", "few", "many", "many")
 avgprice <- c("medium", "low", "medium", "high", "high", "low", "low", "low", "low", "high", "medium", "high")
-category <- c("T", "N", "TG", "T", "G", "TG", "G", "N", "T", "N", "G", "TG")
+label <- c("T", "N", "TG", "T", "G", "TG", "G", "N", "T", "N", "G", "TG")
 
 
 features <- c('textiles', 'gifts', 'avgprice')
-data <- data.frame(customers, textiles, gifts, avgprice, category)
+data <- data.frame(customers, textiles, gifts, avgprice, label)
 
 # OUTPUT
 
 
 isHomogenous <- function(d){
-  return(all(d$category[1] == d$category))
+  return(all(d$label[1] == d$label))
 }
 
 entropy <- function(a){
@@ -29,7 +29,7 @@ BestSplit <- function(d, f){
   n <- nrow(d)
   
   # calculate initial entropy (d_prev)
-  d_0 <- entropy(d$category)  #entropy of d0 (no split)
+  d_0 <- entropy(d$label)  #entropy of d0 (no split)
   info_gain <- c()
   
   # do split for each feature
@@ -38,7 +38,7 @@ BestSplit <- function(d, f){
     entr_splits <- 0
     #iterate over levels
     for(j in 1:length(levels)){  
-      d_j <- d$category[d[[f[i]]]==levels[j]]  #get category of entries that match levels[j]
+      d_j <- d$label[d[[f[i]]]==levels[j]]  #get label of entries that match levels[j]
       entr_j <- entropy(d_j) 
       entr_splits <- entr_splits + n * entr_j
     }
@@ -73,7 +73,7 @@ printTree <- function(tree, prefix = '') {
 
 GrowTree <- function(d, f) {
   if( isHomogenous(d) ) {
-    return(makeLeaf(data$category[1]))
+    return(makeLeaf(data$label[1]))
   }
   
   splitFeature <- BestSplit(d, f)
@@ -95,7 +95,18 @@ GrowTree <- function(d, f) {
   return(makeTree(splitFeature, children))
 }
 
+
+# Ass 1
 tree <- GrowTree(data, features)
 printTree(tree)
 
 
+# Ass 2
+wines <- read.csv('winequality-white.csv')
+names(wines)[names(wines)=="quality"] <- "label"
+  
+tree <- GrowTree(wines,
+  c('fixed.acidity', 'volatile.acidity', 'citric.acid', 'residual.sugar',
+    'chlorides', 'free.sulfur.dioxide', 'total.sulfur.dioxide',
+    'density', 'pH', 'sulphates', 'alcohol'))
+printTree(tree)
