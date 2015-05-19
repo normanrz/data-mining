@@ -30,13 +30,13 @@ BestSplit <- function(d, f){
   for(i in 1:length(f)) { 
     values <- levels(d[[f[i]]])
     child_entropy <- 0
-    #iterate over levels
-    for(j in 1:length(values)){  
-      split_j <- d$label[d[[f[i]]]==values[j]]  #get labels of entries that match values[j]
+    #iterate over values
+    for(v_j in values) {  
+      split_j <- d$label[d[[f[i]]] == v_j]  #get labels of entries that match values[j]
       entr_j <- entropy(split_j) 
-      child_entropy <- child_entropy + length(split_j)/n * entr_j
+      child_entropy <- child_entropy + length(split_j) / n * entr_j
     }
-    info_gain <- c(info_gain,(parent_entropy - child_entropy))
+    info_gain <- c(info_gain, (parent_entropy - child_entropy))
   }
   
   splitFeature <- f[match(max(info_gain), info_gain)]
@@ -62,6 +62,36 @@ printTree <- function(tree, prefix = '') {
     for (child in tree[['children']]) {
       printTree(child, sprintf('  %s', prefix))
     }
+  }
+  return(tree)
+}
+
+countNodes <- function(tree) {
+  if (!is.null(tree[['label']])) {
+    1
+  } else {
+    1 + sum(sapply(tree[['children']], countNodes))
+  }
+}
+countLeaves <- function(tree) {
+  if (!is.null(tree[['label']])) {
+    1
+  } else {
+    0 + sum(sapply(tree[['children']], countLeaves))
+  }
+}
+calcMaxDepth <- function(tree) {
+  if (!is.null(tree[['label']])) {
+    1
+  } else {
+    1 + max(sapply(tree[['children']], calcMaxDepth))
+  }
+}
+calcMinDepth <- function(tree) {
+  if (!is.null(tree[['label']])) {
+    1
+  } else {
+    1 + min(sapply(tree[['children']], calcMinDepth))
   }
 }
 
@@ -101,7 +131,7 @@ bottomUpREP <- function(tree,d) {
       return(subtree_errors)
     }
   }
-  
+
 }
 
 GrowTree <- function(d, f) {
@@ -131,8 +161,8 @@ GrowTree <- function(d, f) {
 
 # Ass 1
 
-# INPUT
 ass1 <- function () {
+  # INPUT
   customers <- c("X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10", "X11", "X12")
   textiles <- c("medium", "few", "medium", "many", "few", "many", "few", "medium", "many", "few", "few", "many")
   gifts <- c("few", "medium", "many", "few", "medium", "medium", "many", "few", "few", "few", "many", "many")
@@ -144,12 +174,15 @@ ass1 <- function () {
   
   tree <- GrowTree(data, features)
   printTree(tree)
+  printf('Nodes: %i\n', countNodes(tree))
+  printf('Leaves: %i\n', countLeaves(tree))
+  printf('Max Depth: %i\n', calcMaxDepth(tree))
+  printf('Min Depth: %i\n', calcMinDepth(tree))
 }
 ass1()
 
 # Ass 2
 ass2 <- function () {
-  
   wines <- read.csv('winequality-white.csv')
   names(wines)[names(wines)=="quality"] <- "label"
   wineFeatures <- c('fixed.acidity', 'volatile.acidity', 'citric.acid', 'residual.sugar',
@@ -161,8 +194,11 @@ ass2 <- function () {
   }
   
   tree <- GrowTree(wines, wineFeatures)
-  
   printTree(tree)
+  printf('Nodes: %i\n', countNodes(tree))
+  printf('Leaves: %i\n', countLeaves(tree))
+  printf('Max Depth: %i\n', calcMaxDepth(tree))
+  printf('Min Depth: %i\n', calcMinDepth(tree))
 }
 ass2()
 
