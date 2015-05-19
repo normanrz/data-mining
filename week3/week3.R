@@ -1,5 +1,7 @@
 printf <- function(...) cat(sprintf(...))
 
+require(lattice)
+
 # INPUT
 customers <- c("X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10", "X11", "X12")
 textiles <- c("medium", "few", "medium", "many", "few", "many", "few", "medium", "many", "few", "few", "many")
@@ -23,6 +25,10 @@ entropy <- function(a){
   a <- a / sum(a) # empiric probability
   a <- -a * log2(a)
   return (sum(a) / 2)
+}
+
+Label <- function(d) {
+  sort(table(data$label),decreasing=TRUE)[1]
 }
 
 BestSplit <- function(d, f){
@@ -72,8 +78,9 @@ printTree <- function(tree, prefix = '') {
 }
 
 GrowTree <- function(d, f) {
-  if( isHomogenous(d) ) {
-    return(makeLeaf(data$label[1]))
+  stopifnot(nrow(d) > 0)
+  if (isHomogenous(d) | length(f) == 0) {
+    return(makeLeaf(Label(d)))
   }
   
   splitFeature <- BestSplit(d, f)
@@ -87,7 +94,11 @@ GrowTree <- function(d, f) {
   children <- list()
   
   for(i in 1:length(subsets)) {
-    childNode <- GrowTree(subsets[[i]], remainingFeatures)
+    if (nrow(subsets[[i]]) > 0) {
+      childNode <- GrowTree(subsets[[i]], remainingFeatures)
+    } else {
+      childNode <- makeLeaf(Label(d))  
+    }
     childNode[['edgeValue']] = names(subsets)[i]
     children[[i]] <- childNode
   }
@@ -104,9 +115,19 @@ printTree(tree)
 # Ass 2
 wines <- read.csv('winequality-white.csv')
 names(wines)[names(wines)=="quality"] <- "label"
-  
-tree <- GrowTree(wines,
-  c('fixed.acidity', 'volatile.acidity', 'citric.acid', 'residual.sugar',
-    'chlorides', 'free.sulfur.dioxide', 'total.sulfur.dioxide',
-    'density', 'pH', 'sulphates', 'alcohol'))
+wineFeatures <- c('fixed.acidity', 'volatile.acidity', 'citric.acid', 'residual.sugar',
+                  'chlorides', 'free.sulfur.dioxide', 'total.sulfur.dioxide',
+                  'density', 'pH', 'sulphates', 'alcohol')
+
+
+discretize <- function (col, n = 10) {
+  stopifnot(require(lattice))
+  cut(col, co.intervals(col, n, 0)[c(1, (n+1):(n*2))], include.lowest = TRUE)
+}
+
+for(f in wineFeatures) {
+  wines[[f]] <- discretize(wines[[f]])
+}
+
+tree <- GrowTree(wines, wineFeatures)
 printTree(tree)
