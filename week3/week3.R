@@ -1,17 +1,6 @@
 printf <- function(...) cat(sprintf(...))
-
 require(lattice)
 
-# INPUT
-customers <- c("X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10", "X11", "X12")
-textiles <- c("medium", "few", "medium", "many", "few", "many", "few", "medium", "many", "few", "few", "many")
-gifts <- c("few", "medium", "many", "few", "medium", "medium", "many", "few", "few", "few", "many", "many")
-avgprice <- c("medium", "low", "medium", "high", "high", "low", "low", "low", "low", "high", "medium", "high")
-label <- c("T", "N", "TG", "T", "G", "TG", "G", "N", "T", "N", "G", "TG")
-
-
-features <- c('textiles', 'gifts', 'avgprice')
-data <- data.frame(customers, textiles, gifts, avgprice, label)
 
 isHomogenous <- function(d){
   return(all(d$label[1] == d$label))
@@ -27,7 +16,7 @@ entropy <- function(a){
 }
 
 Label <- function(d) {
-  sort(table(data$label),decreasing=TRUE)[1]
+  names(sort(table(d$label), decreasing=TRUE))[1]
 }
 
 BestSplit <- function(d, f){
@@ -76,6 +65,10 @@ printTree <- function(tree, prefix = '') {
   }
 }
 
+discretize <- function (col, n = 10) {
+  cut(col, co.intervals(col, n, 0)[c(1, (n+1):(n*2))], include.lowest = TRUE)
+}
+
 bottomUpREP <- function(tree,d) {
   if(!is.null(tree$label) && tree$label==NA){ #catch leaves without label (="NA") that have no associated instances
     return(0) 
@@ -119,52 +112,59 @@ GrowTree <- function(d, f) {
   
   splitFeature <- BestSplit(d, f)
   remainingFeatures <- subset(f, f != splitFeature)
-  
-  #cat(features, "\n")
-  #printf(' -> split with %s\n', splitFeature)
-  
+
   subsets <- split(d, d[[splitFeature]])
   
-  children <- list()
-  
-  for(i in 1:length(subsets)) {
+  children <- lapply(1:length(subsets), function (i) {
     if (nrow(subsets[[i]]) > 0) {
       childNode <- GrowTree(subsets[[i]], remainingFeatures)
     } else {
       childNode <- makeLeaf(Label(d))  
     }
     childNode[['edgeValue']] = names(subsets)[i]
-    children[[i]] <- childNode
-  }
+    return(childNode)
+  })
   
   return(makeTree(splitFeature, children))
 }
 
 
 # Ass 1
-tree <- GrowTree(data, features)
-printTree(tree)
 
-# # Ass 2
-wines <- read.csv('winequality-white.csv')
-names(wines)[names(wines)=="quality"] <- "label"
-wineFeatures <- c('fixed.acidity', 'volatile.acidity', 'citric.acid', 'residual.sugar',
-                  'chlorides', 'free.sulfur.dioxide', 'total.sulfur.dioxide',
-                  'density', 'pH', 'sulphates', 'alcohol')
-
-
-discretize <- function (col, n = 10) {
-  stopifnot(require(lattice))
-  cut(col, co.intervals(col, n, 0)[c(1, (n+1):(n*2))], include.lowest = TRUE)
+# INPUT
+ass1 <- function () {
+  customers <- c("X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10", "X11", "X12")
+  textiles <- c("medium", "few", "medium", "many", "few", "many", "few", "medium", "many", "few", "few", "many")
+  gifts <- c("few", "medium", "many", "few", "medium", "medium", "many", "few", "few", "few", "many", "many")
+  avgprice <- c("medium", "low", "medium", "high", "high", "low", "low", "low", "low", "high", "medium", "high")
+  label <- c("T", "N", "TG", "T", "G", "TG", "G", "N", "T", "N", "G", "TG")
+  
+  features <- c('textiles', 'gifts', 'avgprice')
+  data <- data.frame(customers, textiles, gifts, avgprice, label)
+  
+  tree <- GrowTree(data, features)
+  printTree(tree)
 }
+ass1()
 
-for(f in wineFeatures) {
-  wines[[f]] <- discretize(wines[[f]])
+# Ass 2
+ass2 <- function () {
+  
+  wines <- read.csv('winequality-white.csv')
+  names(wines)[names(wines)=="quality"] <- "label"
+  wineFeatures <- c('fixed.acidity', 'volatile.acidity', 'citric.acid', 'residual.sugar',
+                    'chlorides', 'free.sulfur.dioxide', 'total.sulfur.dioxide',
+                    'density', 'pH', 'sulphates', 'alcohol')
+  
+  for(f in wineFeatures) {
+    wines[[f]] <- discretize(wines[[f]])
+  }
+  
+  tree <- GrowTree(wines, wineFeatures)
+  
+  printTree(tree)
 }
-
-tree <- GrowTree(wines, wineFeatures)
-
-printTree(tree)
+ass2()
 
 # Ass 3
 #bottomUpREP(tree,wines)
