@@ -112,7 +112,7 @@ printPerformance <- function (predicted, actuals) {
     rec <- if (tp > 0) { tp / (tp + fn) } else { 1 }
     f1 <- if (prec + rec > 0) { 2 * prec * rec / (prec + rec) } else { 0 }
     
-    printf('"%s" %f %f %f\n', value, prec, rec, f1)
+    # printf('"%s" %f %f %f\n', value, prec, rec, f1)
     data.frame(value=value, prec=prec, rec=rec, f1=f1)
   }))
   
@@ -127,39 +127,42 @@ discretize <- function (col, n = 10) {
   cut(col, co.intervals(col, n, 0)[c(1, (n+1):(n*2))], include.lowest = TRUE)
 }
 
-bottomUpREP <- function(tree,d) {
-  if(!is.null(tree$label) && tree$label==NA){ #catch leaves without label (="NA") that have no associated instances
-    return(0) 
-  }
-  
-  if(is.null(tree[['children']])) {
-    return(nrow(d[d$label != tree$label,])) # returns number of errors for this leaf
-  }
-  
-  if(!is.null(tree[['children']])) {
-    subtree_errors <- 0
-    for(i in length(tree[['children']])){
-      c <- tree[['children']][[i]]
-      selected_data <- d[d[[tree$splitFeature]]==c$edgeValue,]
-      n_errors <- bottomUp(tree[['children']][[i]],selected_data)
-      subtree_errors <- subtree_errors + n_errors
-    }
+pruneTree <- function(t, d) {
+
+  newNode <- t # Copy node
+  if (isLeaf(t)) {
+    # returns number of errors for this leaf
+    newNode[['errors']] <- sum(d[['label']] != t[['label']])
+    return(newNode)
+  } else {
+    
+    splitFeature <- t[['splitFeature']]
+    
+    newChildren <- lapply(t[['children']], function (childNode) {
+      # Select data points that are covered by child subtree
+      selectedData <- d[d[[splitFeature]] == childNode[['edgeValue']],]
+      newChildNode <- pruneTree(childNode, selectedData)
+      newChildNode
+    })
+    subtreeErrors <- sum(sapply(newChildren, function (childNode) {
+      childNode[['errors']]
+    }))
     
     # Perform Pruning if it reduces error
-    t <- table(d$label) # get counts for each label value
-    majority_class <- names(t)[match(max(t),t)]
-    node_errors <- nrow(d[d$label != majority_class,])
-    if(node_errors < subtree_errors){
-      tree['label'] <- majority_class
-      tree['children'] <- NULL
-      tree['splitFeature'] <- NULL
-      return(node_errors)
+    majorityClass <- Label(d)
+    nodeErrors <- sum(d[['label']] != majorityClass)
+    if(nodeErrors < subtreeErrors){
+      newNode <- makeLeaf(majorityClass)
+      newNode[['edgeValue']] <- t[['edgeValue']]
+      newNode[['errors']] <- nodeErrors
+      return(newNode)
     }
     else{
-      return(subtree_errors)
+      newNode[['errors']] <- subtreeErrors
+      return(newNode)
     }
   }
-
+  
 }
 
 GrowTree <- function(d, f) {
@@ -227,6 +230,13 @@ crossValidation <- function (folds, features) {
     printPerformance(predictMany(tree, fold$test), fold$test$label)
   })
 }
+crossValidationWithPruning <- function (folds, features) {
+  lapply(folds, function (fold) {
+    tree <- GrowTree(fold$train, features)
+    tree <- pruneTree(tree, fold$train)
+    printPerformance(predictMany(tree, fold$test), fold$test$label)
+  })
+}
 
 # Ass 1
 
@@ -254,10 +264,9 @@ ass1 <- function () {
   a <- crossValidation(kfold(3, data), features)
   str(do.call(rbind, a))
 }
-ass1()
+# ass1()
 
-# Ass 2
-ass2 <- function () {
+prepareWines <- function () {
   wines <- read.csv('winequality-white.csv')
   wineFeatures <- c('fixed.acidity', 'volatile.acidity', 'citric.acid', 'residual.sugar',
                     'chlorides', 'free.sulfur.dioxide', 'total.sulfur.dioxide',
@@ -268,14 +277,23 @@ ass2 <- function () {
     names(data)[names(data)=="quality"] <- "label"
     # Discretize all feature columns
     for(f in features) {
-      data[[f]] <- discretize(data[[f]])
+      data[[f]] <- discretize(data[[f]], 10)
     }
     data
   }
   
   data <- preprocess(wines, wineFeatures)
-  tree <- GrowTree(data, wineFeatures)
-  printTree(tree)
+  list(data=data, features=wineFeatures)
+}
+
+# Ass 2
+ass2 <- function () {
+  tmp <- prepareWines()
+  data <- tmp$data
+  features <- tmp$features
+  
+  tree <- GrowTree(data, features)
+  # printTree(tree)
   printf('Nodes: %i\n', countNodes(tree))
   printf('Leaves: %i\n', countLeaves(tree))
   printf('Max Depth: %i\n', calcMaxDepth(tree))
@@ -285,30 +303,49 @@ ass2 <- function () {
          data[1,][['label']])
   printPerformance(predictMany(tree, data), data$label)
 }
-# ass2()
+ass2()
 
 # Ass 3
-#bottomUpREP(tree,wines)
+ass3 <- function () {
+  tmp <- prepareWines()
+  data <- tmp$data
+  features <- tmp$features
+  
+  data1 <- data[sample(nrow(data)),]
+  mid <- floor(0.75 * nrow(data1))
+  trainData <- data1[1:mid,]
+  pruneData <- data1[-(1:mid),]
+  
+  tree <- GrowTree(trainData, features)
+  # printPerformance(predictMany(tree, data), data$label)
+  prunedTree <- pruneTree(tree, pruneData)
+  printf('Nodes: %i %i\n', countNodes(tree), countNodes(prunedTree))
+  printf('Leaves: %i\n', countLeaves(prunedTree))
+  printf('Max Depth: %i\n', calcMaxDepth(prunedTree))
+  printf('Min Depth: %i\n', calcMinDepth(prunedTree))
+}
+ass3()
 
 # Ass 4
 ass4 <- function () {
-  wines <- read.csv('winequality-white.csv')
-  wineFeatures <- c('fixed.acidity', 'volatile.acidity', 'citric.acid', 'residual.sugar',
-                    'chlorides', 'free.sulfur.dioxide', 'total.sulfur.dioxide',
-                    'density', 'pH', 'sulphates', 'alcohol')
+  tmp <- prepareWines()
+  data <- tmp$data
+  features <- tmp$features
   
-  preprocess <- function (data, features) {
-    # Rename 'quality' to 'label'
-    names(data)[names(data)=="quality"] <- "label"
-    # Discretize all feature columns
-    for(f in features) {
-      data[[f]] <- discretize(data[[f]])
-    }
-    data
-  }
+  a <- crossValidation(kfold(10, data), features)
+  a <- do.call(rbind, a)
+  printf('Acc %f %f\n', mean(a$acc), sd(a$acc))
+  printf('Prec %f %f\n', mean(a$prec), sd(a$prec))
+  printf('Recall %f %f\n', mean(a$rec), sd(a$rec))
+  printf('F1 %f %f\n', mean(a$f1), sd(a$f1))
   
-  data <- preprocess(wines, wineFeatures)
-  a <- crossValidation(kfold(10, data), wineFeatures)
-  str(do.call(rbind, a))
+  b <- crossValidationWithPruning(kfold(10, data), features)
+  b <- do.call(rbind, b)
+  printf('Acc %f %f\n', mean(b$acc), sd(b$acc))
+  printf('Prec %f %f\n', mean(b$prec), sd(b$prec))
+  printf('Recall %f %f\n', mean(b$rec), sd(b$rec))
+  printf('F1 %f %f\n', mean(b$f1), sd(b$f1))
+  
+  a
 }
-ass4()
+# a4 <- ass4()
