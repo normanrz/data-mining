@@ -233,9 +233,18 @@ crossValidation <- function (folds, features) {
 }
 crossValidationWithPruning <- function (folds, features) {
   lapply(folds, function (fold) {
-    tree <- GrowTree(fold$train, features)
-    tree <- pruneTree(tree, fold$train)
-    printPerformance(predictMany(tree, fold$test), fold$test$label)
+    
+    # Split dataset in train and prune samples
+    data1 <- fold$train[sample(nrow(fold$train)),]
+    mid <- floor(0.75 * nrow(data1))
+    trainData <- data1[1:mid,]
+    pruneData <- data1[-(1:mid),]
+    
+    tree <- GrowTree(trainData, features)
+    prunedTree <- pruneTree(tree, pruneData)
+    cbind(
+      printPerformance(predictMany(tree, fold$test), fold$test$label),
+      printPerformance(predictMany(prunedTree, fold$test), fold$test$label))
   })
 }
 
@@ -326,7 +335,7 @@ ass3 <- function () {
   printf('Max Depth: %i %i\n', calcMaxDepth(tree), calcMaxDepth(prunedTree))
   printf('Min Depth: %i %i\n', calcMinDepth(tree), calcMinDepth(prunedTree))
 }
-ass3()
+# ass3()
 
 # Ass 4
 ass4 <- function () {
@@ -334,20 +343,17 @@ ass4 <- function () {
   data <- tmp$data
   features <- tmp$features
   
-  a <- crossValidation(kfold(10, data), features)
-  a <- do.call(rbind, a)
-  printf('Acc %f %f\n', mean(a$acc), sd(a$acc))
-  printf('Prec %f %f\n', mean(a$prec), sd(a$prec))
-  printf('Recall %f %f\n', mean(a$rec), sd(a$rec))
-  printf('F1 %f %f\n', mean(a$f1), sd(a$f1))
-  
   b <- crossValidationWithPruning(kfold(10, data), features)
   b <- do.call(rbind, b)
-  printf('Acc %f %f\n', mean(b$acc), sd(b$acc))
-  printf('Prec %f %f\n', mean(b$prec), sd(b$prec))
-  printf('Recall %f %f\n', mean(b$rec), sd(b$rec))
-  printf('F1 %f %f\n', mean(b$f1), sd(b$f1))
+
+  print(b[,1:4])
+  print(b[,5:8])
+  printf('Acc %f %f / %f %f\n', mean(b[,1]), sd(b[,1]), mean(b[,5]), sd(b[,5]))
+  printf('Prec %f %f / %f %f\n', mean(b[,2]), sd(b[,2]), mean(b[,6]), sd(b[,6]))
+  printf('Recall %f %f / %f %f\n', mean(b[,3]), sd(b[,3]), mean(b[,7]), sd(b[,7]))
+  printf('F1 %f %f / %f %f\n', mean(b[,4]), sd(b[,4]), mean(b[,8]), sd(b[,8]))
   
-  a
+  print(t.test(b[,4], b[,8], paired=TRUE))
+  b
 }
-# a4 <- ass4()
+a4 <- ass4()
