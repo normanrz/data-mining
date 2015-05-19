@@ -13,15 +13,14 @@ label <- c("T", "N", "TG", "T", "G", "TG", "G", "N", "T", "N", "G", "TG")
 features <- c('textiles', 'gifts', 'avgprice')
 data <- data.frame(customers, textiles, gifts, avgprice, label)
 
-# OUTPUT
-
-
 isHomogenous <- function(d){
   return(all(d$label[1] == d$label))
 }
 
 entropy <- function(a){
+  if(length(a)==0){return(0)}
   a <- table(a) # group by and count
+  a <- a[a!=0] # avoid computing log2(0) which gives -Inf
   a <- a / sum(a) # empiric probability
   a <- -a * log2(a)
   return (sum(a) / 2)
@@ -35,20 +34,20 @@ BestSplit <- function(d, f){
   n <- nrow(d)
   
   # calculate initial entropy (d_prev)
-  d_0 <- entropy(d$label)  #entropy of d0 (no split)
+  parent_entropy <- entropy(d$label)  #parent entropy without split
   info_gain <- c()
   
   # do split for each feature
   for(i in 1:length(f)) { 
-    levels <- levels(d[[f[i]]])
-    entr_splits <- 0
+    values <- levels(d[[f[i]]])
+    child_entropy <- 0
     #iterate over levels
-    for(j in 1:length(levels)){  
-      d_j <- d$label[d[[f[i]]]==levels[j]]  #get label of entries that match levels[j]
-      entr_j <- entropy(d_j) 
-      entr_splits <- entr_splits + n * entr_j
+    for(j in 1:length(values)){  
+      split_j <- d$label[d[[f[i]]]==values[j]]  #get labels of entries that match values[j]
+      entr_j <- entropy(split_j) 
+      child_entropy <- child_entropy + length(split_j)/n * entr_j
     }
-    info_gain <- c(info_gain,(entr_splits - d_0))
+    info_gain <- c(info_gain,(parent_entropy - child_entropy))
   }
   
   splitFeature <- f[match(max(info_gain), info_gain)]
@@ -75,6 +74,41 @@ printTree <- function(tree, prefix = '') {
       printTree(child, sprintf('  %s', prefix))
     }
   }
+}
+
+bottomUpREP <- function(tree,d) {
+  if(!is.null(tree$label) && tree$label==NA){ #catch leaves without label (="NA") that have no associated instances
+    return(0) 
+  }
+  
+  if(is.null(tree[['children']])) {
+    return(nrow(d[d$label != tree$label,])) # returns number of errors for this leaf
+  }
+  
+  if(!is.null(tree[['children']])) {
+    subtree_errors <- 0
+    for(i in length(tree[['children']])){
+      c <- tree[['children']][[i]]
+      selected_data <- d[d[[tree$splitFeature]]==c$edgeValue,]
+      n_errors <- bottomUp(tree[['children']][[i]],selected_data)
+      subtree_errors <- subtree_errors + n_errors
+    }
+    
+    # Perform Pruning if it reduces error
+    t <- table(d$label) # get counts for each label value
+    majority_class <- names(t)[match(max(t),t)]
+    node_errors <- nrow(d[d$label != majority_class,])
+    if(node_errors < subtree_errors){
+      tree['label'] <- majority_class
+      tree['children'] <- NULL
+      tree['splitFeature'] <- NULL
+      return(node_errors)
+    }
+    else{
+      return(subtree_errors)
+    }
+  }
+  
 }
 
 GrowTree <- function(d, f) {
@@ -111,8 +145,7 @@ GrowTree <- function(d, f) {
 tree <- GrowTree(data, features)
 printTree(tree)
 
-
-# Ass 2
+# # Ass 2
 wines <- read.csv('winequality-white.csv')
 names(wines)[names(wines)=="quality"] <- "label"
 wineFeatures <- c('fixed.acidity', 'volatile.acidity', 'citric.acid', 'residual.sugar',
@@ -130,4 +163,8 @@ for(f in wineFeatures) {
 }
 
 tree <- GrowTree(wines, wineFeatures)
+
 printTree(tree)
+
+# Ass 3
+#bottomUpREP(tree,wines)
