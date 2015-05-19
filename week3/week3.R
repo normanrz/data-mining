@@ -51,11 +51,15 @@ makeTree <- function (splitFeature, children = list()) {
   list(splitFeature=splitFeature, children=children)
 }
 
+isLeaf <- function (tree) {
+  !is.null(tree[['label']])
+}
+
 printTree <- function(tree, prefix = '') {
   if (!is.null(tree[['edgeValue']])) {
     printf('%sEdge: %s\n', prefix, tree[['edgeValue']])
   }
-  if (!is.null(tree[['label']])) {
+  if (isLeaf(tree)) {
     printf('%sLabel: %s\n', prefix, tree[['label']])
   } else {
     printf('%sSplit feature: %s\n', prefix, tree[['splitFeature']])
@@ -67,28 +71,28 @@ printTree <- function(tree, prefix = '') {
 }
 
 countNodes <- function(tree) {
-  if (!is.null(tree[['label']])) {
+  if (isLeaf(tree)) {
     1
   } else {
     1 + sum(sapply(tree[['children']], countNodes))
   }
 }
 countLeaves <- function(tree) {
-  if (!is.null(tree[['label']])) {
+  if (isLeaf(tree)) {
     1
   } else {
     0 + sum(sapply(tree[['children']], countLeaves))
   }
 }
 calcMaxDepth <- function(tree) {
-  if (!is.null(tree[['label']])) {
+  if (isLeaf(tree)) {
     1
   } else {
     1 + max(sapply(tree[['children']], calcMaxDepth))
   }
 }
 calcMinDepth <- function(tree) {
-  if (!is.null(tree[['label']])) {
+  if (isLeaf(tree)) {
     1
   } else {
     1 + min(sapply(tree[['children']], calcMinDepth))
@@ -158,6 +162,22 @@ GrowTree <- function(d, f) {
   return(makeTree(splitFeature, children))
 }
 
+predictTree <- function(tree, x) {
+  traverse <- function(subtree) {
+    if (isLeaf(subtree)) {
+      return(subtree[['label']])
+    } else {
+      splitValue <- x[[subtree[['splitFeature']]]]
+      for (childNode in subtree[['children']]) {
+        if (splitValue == childNode[['edgeValue']]) {
+          return(traverse(childNode))
+        }
+      }
+    }
+  }
+  traverse(tree)
+}
+
 
 # Ass 1
 
@@ -178,27 +198,39 @@ ass1 <- function () {
   printf('Leaves: %i\n', countLeaves(tree))
   printf('Max Depth: %i\n', calcMaxDepth(tree))
   printf('Min Depth: %i\n', calcMinDepth(tree))
+  printf('Predicted: %s, Actual: %s\n', 
+         predictTree(tree, data[1,]), 
+         data[1,][['label']])
 }
 ass1()
 
 # Ass 2
 ass2 <- function () {
   wines <- read.csv('winequality-white.csv')
-  names(wines)[names(wines)=="quality"] <- "label"
   wineFeatures <- c('fixed.acidity', 'volatile.acidity', 'citric.acid', 'residual.sugar',
                     'chlorides', 'free.sulfur.dioxide', 'total.sulfur.dioxide',
                     'density', 'pH', 'sulphates', 'alcohol')
   
-  for(f in wineFeatures) {
-    wines[[f]] <- discretize(wines[[f]])
+  preprocess <- function (data, features) {
+    # Rename 'quality' to 'label'
+    names(data)[names(data)=="quality"] <- "label"
+    # Discretize all feature columns
+    for(f in features) {
+      data[[f]] <- discretize(data[[f]])
+    }
+    data
   }
   
-  tree <- GrowTree(wines, wineFeatures)
+  data <- preprocess(wines, wineFeatures)
+  tree <- GrowTree(data, wineFeatures)
   printTree(tree)
   printf('Nodes: %i\n', countNodes(tree))
   printf('Leaves: %i\n', countLeaves(tree))
   printf('Max Depth: %i\n', calcMaxDepth(tree))
   printf('Min Depth: %i\n', calcMinDepth(tree))
+  printf('Predicted: %s, Actual: %s\n', 
+         predictTree(tree, data[1,]), 
+         data[1,][['label']])
 }
 ass2()
 
