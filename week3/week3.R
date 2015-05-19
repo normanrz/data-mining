@@ -144,6 +144,7 @@ pruneTree <- function(t, d) {
       newChildNode <- pruneTree(childNode, selectedData)
       newChildNode
     })
+    newNode[['children']] <- newChildren
     subtreeErrors <- sum(sapply(newChildren, function (childNode) {
       childNode[['errors']]
     }))
@@ -303,7 +304,7 @@ ass2 <- function () {
          data[1,][['label']])
   printPerformance(predictMany(tree, data), data$label)
 }
-ass2()
+# ass2()
 
 # Ass 3
 ass3 <- function () {
@@ -311,6 +312,7 @@ ass3 <- function () {
   data <- tmp$data
   features <- tmp$features
   
+  # Split dataset in train and prune samples
   data1 <- data[sample(nrow(data)),]
   mid <- floor(0.75 * nrow(data1))
   trainData <- data1[1:mid,]
