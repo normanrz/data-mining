@@ -322,9 +322,9 @@ ass3 <- function () {
   # printPerformance(predictMany(tree, data), data$label)
   prunedTree <- pruneTree(tree, pruneData)
   printf('Nodes: %i %i\n', countNodes(tree), countNodes(prunedTree))
-  printf('Leaves: %i\n', countLeaves(prunedTree))
-  printf('Max Depth: %i\n', calcMaxDepth(prunedTree))
-  printf('Min Depth: %i\n', calcMinDepth(prunedTree))
+  printf('Leaves: %i %i\n', countLeaves(tree), countLeaves(prunedTree))
+  printf('Max Depth: %i %i\n', calcMaxDepth(tree), calcMaxDepth(prunedTree))
+  printf('Min Depth: %i %i\n', calcMinDepth(tree), calcMinDepth(prunedTree))
 }
 ass3()
 
