@@ -33,7 +33,7 @@ BestSplit <- function(d, f){
   
   # do split for each feature
   for(i in 1:length(f)) { 
-   values <- levels(d[[f[i]]])
+    values <- levels(d[[f[i]]])
     child_entropy <- 0
     #iterate over levels
     for(j in 1:length(values)){  
@@ -70,6 +70,41 @@ printTree <- function(tree, prefix = '') {
   }
 }
 
+bottomUpREP <- function(tree,d) {
+  if(!is.null(tree$label) && tree$label==NA){ #catch leaves without label (="NA") that have no associated instances
+    return(0) 
+  }
+  
+  if(is.null(tree[['children']])) {
+    return(nrow(d[d$label != tree$label,])) # returns number of errors for this leaf
+  }
+  
+  if(!is.null(tree[['children']])) {
+    subtree_errors <- 0
+    for(i in length(tree[['children']])){
+      c <- tree[['children']][[i]]
+      selected_data <- d[d[[tree$splitFeature]]==c$edgeValue,]
+      n_errors <- bottomUp(tree[['children']][[i]],selected_data)
+      subtree_errors <- subtree_errors + n_errors
+    }
+    
+    # Perform Pruning if it reduces error
+    t <- table(d$label) # get counts for each label value
+    majority_class <- names(t)[match(max(t),t)]
+    node_errors <- nrow(d[d$label != majority_class,])
+    if(node_errors < subtree_errors){
+      tree['label'] <- majority_class
+      tree['children'] <- NULL
+      tree['splitFeature'] <- NULL
+      return(node_errors)
+    }
+    else{
+      return(subtree_errors)
+    }
+  }
+  
+}
+
 GrowTree <- function(d, f) {
   if( isHomogenous(d) ) {
     return(makeLeaf(d$label[1]))
@@ -99,13 +134,15 @@ GrowTree <- function(d, f) {
 tree <- GrowTree(data, features)
 printTree(tree)
 
-
 # # Ass 2
-# wines <- read.csv('winequality-white.csv')
-# names(wines)[names(wines)=="quality"] <- "label"
-#   
-# tree <- GrowTree(wines,
-#   c('fixed.acidity', 'volatile.acidity', 'citric.acid', 'residual.sugar',
-#     'chlorides', 'free.sulfur.dioxide', 'total.sulfur.dioxide',
-#     'density', 'pH', 'sulphates', 'alcohol'))
-# printTree(tree)
+wines <- read.csv('winequality-white.csv')
+names(wines)[names(wines)=="quality"] <- "label"
+
+tree <- GrowTree(wines,
+                 c('fixed.acidity', 'volatile.acidity', 'citric.acid', 'residual.sugar',
+                   'chlorides', 'free.sulfur.dioxide', 'total.sulfur.dioxide',
+                   'density', 'pH', 'sulphates', 'alcohol'))
+printTree(tree)
+
+# Ass 3
+bottomUpREP(tree,wines)
