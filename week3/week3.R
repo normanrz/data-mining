@@ -1,6 +1,6 @@
 printf <- function(...) cat(sprintf(...))
 require(lattice)
-
+require(SDMTools)
 
 isHomogenous <- function(d){
   return(all(d$label[1] == d$label))
@@ -99,6 +99,32 @@ calcMinDepth <- function(tree) {
   }
 }
 
+printPerformance <- function (predicted, actuals) {
+  stopifnot(length(predicted) == length(actuals))
+  acc = sum(predicted == actuals) / length(predicted)
+  
+  a <- data.frame()
+  for (value in unique(actuals)) {
+    tp <- sum((predicted == actuals) & (predicted == value))
+    tn <- sum((predicted == actuals) & (predicted != value))
+    fp <- sum((predicted != actuals) & (predicted == value))
+    fn <- sum((predicted != actuals) & (predicted != value))
+    # printf('"%s" %f %f %f %f =%f\n', value, tp, tn, fp, fn, tp + tn + fp + fn)
+    prec <- tp / (tp + fp)
+    rec <- tp / (tp + fn)
+    f1 <- 2 * prec * rec / (prec + rec)
+    
+    printf('"%s" %f %f %f\n', value, prec, rec, f1)
+    a <- rbind(a, data.frame(value=value, prec=prec, rec=rec, f1=f1))
+  }
+  
+  printf('Accuracy: %f\n', acc)
+  printf('Precision: %f\n', mean(a$prec))
+  printf('Recall: %f\n', mean(a$rec))
+  printf('F1-Score: %f\n', mean(a$f1))
+  data.frame(acc=acc, prec=mean(a$prec), rec=mean(a$rec), f1=mean(a$f1))
+}
+
 discretize <- function (col, n = 10) {
   cut(col, co.intervals(col, n, 0)[c(1, (n+1):(n*2))], include.lowest = TRUE)
 }
@@ -162,7 +188,7 @@ GrowTree <- function(d, f) {
   return(makeTree(splitFeature, children))
 }
 
-predictTree <- function(tree, x) {
+predictSingle <- function(tree, x) {
   traverse <- function(subtree) {
     if (isLeaf(subtree)) {
       return(subtree[['label']])
@@ -176,6 +202,11 @@ predictTree <- function(tree, x) {
     }
   }
   traverse(tree)
+}
+predictMany <- function(tree, X) {
+  apply(X, 1, function (x) { 
+    predictSingle(tree, x) 
+  })
 }
 
 
@@ -199,8 +230,9 @@ ass1 <- function () {
   printf('Max Depth: %i\n', calcMaxDepth(tree))
   printf('Min Depth: %i\n', calcMinDepth(tree))
   printf('Predicted: %s, Actual: %s\n', 
-         predictTree(tree, data[1,]), 
+         predictSingle(tree, data[1,]), 
          data[1,][['label']])
+  printPerformance(predictMany(tree, data), data$label)
 }
 ass1()
 
@@ -229,8 +261,9 @@ ass2 <- function () {
   printf('Max Depth: %i\n', calcMaxDepth(tree))
   printf('Min Depth: %i\n', calcMinDepth(tree))
   printf('Predicted: %s, Actual: %s\n', 
-         predictTree(tree, data[1,]), 
+         predictSingle(tree, data[1,]), 
          data[1,][['label']])
+  printPerformance(predictMany(tree, data), data$label)
 }
 ass2()
 
