@@ -1,6 +1,5 @@
 printf <- function(...) cat(sprintf(...))
 require(lattice)
-require(SDMTools)
 
 isHomogenous <- function(d){
   return(all(d$label[1] == d$label))
@@ -103,20 +102,19 @@ printPerformance <- function (predicted, actuals) {
   stopifnot(length(predicted) == length(actuals))
   acc = sum(predicted == actuals) / length(predicted)
   
-  a <- data.frame()
-  for (value in unique(actuals)) {
+  a <- do.call(rbind, lapply(unique(actuals), function(value) {
     tp <- sum((predicted == actuals) & (predicted == value))
     tn <- sum((predicted == actuals) & (predicted != value))
     fp <- sum((predicted != actuals) & (predicted == value))
     fn <- sum((predicted != actuals) & (predicted != value))
     # printf('"%s" %f %f %f %f =%f\n', value, tp, tn, fp, fn, tp + tn + fp + fn)
-    prec <- tp / (tp + fp)
-    rec <- tp / (tp + fn)
-    f1 <- 2 * prec * rec / (prec + rec)
+    prec <- if (tp > 0) { tp / (tp + fp) } else { 1 }
+    rec <- if (tp > 0) { tp / (tp + fn) } else { 1 }
+    f1 <- if (prec + rec > 0) { 2 * prec * rec / (prec + rec) } else { 0 }
     
     printf('"%s" %f %f %f\n', value, prec, rec, f1)
-    a <- rbind(a, data.frame(value=value, prec=prec, rec=rec, f1=f1))
-  }
+    data.frame(value=value, prec=prec, rec=rec, f1=f1)
+  }))
   
   printf('Accuracy: %f\n', acc)
   printf('Precision: %f\n', mean(a$prec))
@@ -209,6 +207,26 @@ predictMany <- function(tree, X) {
   })
 }
 
+kfold <- function(k, d) {
+  n <- nrow(d)
+  binSize <- floor(n / k)
+  d <- d[sample(n),]
+  lapply(1:k, function (i) {
+    start <- (i - 1) * binSize + 1
+    end <- i * binSize
+    train <- d[-(start:end),]
+    test <- d[(start:end),]
+    stopifnot(nrow(train) + nrow(test) == n)
+    list(train=train, test=test)
+  })
+}
+
+crossValidation <- function (folds, features) {
+  lapply(folds, function (fold) {
+    tree <- GrowTree(fold$train, features)
+    printPerformance(predictMany(tree, fold$test), fold$test$label)
+  })
+}
 
 # Ass 1
 
@@ -233,6 +251,8 @@ ass1 <- function () {
          predictSingle(tree, data[1,]), 
          data[1,][['label']])
   printPerformance(predictMany(tree, data), data$label)
+  a <- crossValidation(kfold(3, data), features)
+  str(do.call(rbind, a))
 }
 ass1()
 
@@ -265,7 +285,30 @@ ass2 <- function () {
          data[1,][['label']])
   printPerformance(predictMany(tree, data), data$label)
 }
-ass2()
+# ass2()
 
 # Ass 3
 #bottomUpREP(tree,wines)
+
+# Ass 4
+ass4 <- function () {
+  wines <- read.csv('winequality-white.csv')
+  wineFeatures <- c('fixed.acidity', 'volatile.acidity', 'citric.acid', 'residual.sugar',
+                    'chlorides', 'free.sulfur.dioxide', 'total.sulfur.dioxide',
+                    'density', 'pH', 'sulphates', 'alcohol')
+  
+  preprocess <- function (data, features) {
+    # Rename 'quality' to 'label'
+    names(data)[names(data)=="quality"] <- "label"
+    # Discretize all feature columns
+    for(f in features) {
+      data[[f]] <- discretize(data[[f]])
+    }
+    data
+  }
+  
+  data <- preprocess(wines, wineFeatures)
+  a <- crossValidation(kfold(10, data), wineFeatures)
+  str(do.call(rbind, a))
+}
+ass4()
