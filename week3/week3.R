@@ -235,10 +235,8 @@ crossValidationWithPruning <- function (folds, features) {
   lapply(folds, function (fold) {
     
     # Split dataset in train and prune samples
-    data1 <- fold$train[sample(nrow(fold$train)),]
-    mid <- floor(0.75 * nrow(data1))
-    trainData <- data1[1:mid,]
-    pruneData <- data1[-(1:mid),]
+    trainData <- fold$train[sample(floor(0.7 * nrow(fold$train))),]
+    pruneData <- fold$train[sample(floor(0.9 * nrow(fold$train))),]
     
     tree <- GrowTree(trainData, features)
     prunedTree <- pruneTree(tree, pruneData)
