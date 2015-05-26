@@ -59,12 +59,12 @@ ass4 <- function () {
       newCluster <- mcmapply(function (i) {
         which.min(sapply(1:k, function (j) { dist(data[i,], centers[j,]) }))
       }, 1:n, mc.cores=4)
-      printf('%i samples newly assigned\n', sum(newCluster != cluster))
-      hist(newCluster)
+
       if (sum(newCluster != cluster) > 0) {
         hasChanged <- TRUE
         cluster <- newCluster
       }
+      printf('%i samples newly assigned\n', sum(newCluster != cluster))
       
       # Update step
       centers <- do.call(rbind, lapply(1:k, function (j) {
