@@ -21,7 +21,7 @@ ass4 <- function () {
     winning_bets <- vector()
     
     while(win_sum < 3000){
-        rand_nr <- floor(runif(1)*38)
+        rand_nr <- sample(0:36,1)
         if(rand_nr == 0){
             is_null = TRUE
             bet = bet*2
