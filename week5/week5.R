@@ -1,6 +1,14 @@
 pardefault <- par()
 printf <- function(...) cat(sprintf(...))
 
+# Ass 7
+ass7 <- function () {
+  model <- lda(data.frame(Sepal=iris$Sepal.Length, Petal=iris$Petal.Length), iris$Species)
+  test <- data.frame(Sepal=c(4.5, 5, 5.5, 6, 7), Petal=c(2, 1.5, 3, 4.3, 7))
+  print(predict(model, test)$class)
+}
+ass7()
+
 
 # Ass 8
 ass8 <- function () {
