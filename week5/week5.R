@@ -60,7 +60,7 @@ ass4 <- function () {
         is_black = FALSE
     }
     
-    hist(winning_bets,main="Histogram of winning bets", xlab="bet amount in EURO")
+    plot(table(winning_bets), log='x', main = "Histogram of winning bets", xlab = "Bet amount in $", ylab = "Frequency")
     printf("Highest bet: %s \n",max(winning_bets))
     printf("Total number of bets: %s \n",n)
 }
@@ -83,4 +83,4 @@ ass8 <- function () {
                family=binomial(logit), data=menarche)
   lines(menarche$Age, model$fitted, type="l", col="red")
 }
-# ass8()
+ass8()
