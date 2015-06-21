@@ -1,6 +1,7 @@
 pardefault <- par()
 printf <- function(...) cat(sprintf(...))
 
+
 # Ass 7
 ass7 <- function () {
   model <- lda(data.frame(Sepal=iris$Sepal.Length, Petal=iris$Petal.Length), iris$Species)
@@ -9,6 +10,45 @@ ass7 <- function () {
 }
 ass7()
 
+# Ass 4
+ass4 <- function () {
+    is_null = FALSE
+    is_red = FALSE
+    is_black = FALSE
+    win_sum = 0
+    bet = 1
+    n = 0
+    winning_bets <- vector()
+    
+    while(win_sum < 3000){
+        rand_nr <- floor(runif(1)*38)
+        if(rand_nr == 0){
+            is_null = TRUE
+            bet = bet*2
+        }
+        else if(rand_nr <= 18 ){
+            is_red = TRUE
+            win_sum = win_sum+1
+            winning_bets <- c(winning_bets,bet)
+            bet=1
+        }
+        else if(rand_nr > 18){
+            is_black = TRUE
+            bet = bet*2
+        }
+        n = n+1
+        #temp <- paste("round:", n,"- rand_nr:",rand_nr,"- bet:",bet,"- win_sum:",win_sum)
+        #print(temp)
+        is_null = FALSE
+        is_red = FALSE
+        is_black = FALSE
+    }
+    
+    hist(winning_bets,main="Histogram of winning bets", xlab="bet amount in EURO")
+    printf("Highest bet: %s \n",max(winning_bets))
+    printf("Total number of bets: %s \n",n)
+}
+ass4()
 
 # Ass 8
 ass8 <- function () {
